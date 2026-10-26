@@ -59,12 +59,13 @@ export async function api(path,method='GET',body={}){
  if(path==='invite')return {code:await rpc('lu_invite')};
  const id=await home(),a=await access();
  if(path==='state'){
-  const [items,members,stores]=await Promise.all([request('/rest/v1/lu_items?select=id,kind,title,store,done,cuisine,address,notes&home_id=eq.'+id+'&order=created_at.asc','GET',undefined,a),request('/rest/v1/lu_members?select=user_id&home_id=eq.'+id,'GET',undefined,a),request('/rest/v1/lu_stores?select=name&home_id=eq.'+id+'&order=name.asc','GET',undefined,a)]);
-  return {items,members:members.length,stores:stores.map(s=>s.name)};
+  const [items,members,stores,preferences]=await Promise.all([request('/rest/v1/lu_items?select=id,kind,title,store,done,cuisine,address,notes,category&home_id=eq.'+id+'&order=created_at.asc','GET',undefined,a),request('/rest/v1/lu_members?select=user_id&home_id=eq.'+id,'GET',undefined,a),request('/rest/v1/lu_stores?select=name&home_id=eq.'+id+'&order=name.asc','GET',undefined,a),request('/rest/v1/lu_preferences?select=store_order&home_id=eq.'+id,'GET',undefined,a)]);
+  return {items,members:members.length,stores:stores.map(s=>s.name),storeOrder:preferences[0]?.store_order||[]};
  }
+ if(path==='store-order')return rpc('lu_set_store_order',{new_order:body.order});
  if(path==='stores'&&method==='POST')return request('/rest/v1/lu_stores','POST',{home_id:id,name:body.name},a);
- if(path==='items'&&method==='POST')return request('/rest/v1/lu_items','POST',{home_id:id,kind:body.kind,title:body.title,store:body.store,...(body.kind==='restaurants'?{cuisine:body.cuisine||'',address:body.address||'',notes:body.notes||''}:{})},a);
+ if(path==='items'&&method==='POST')return request('/rest/v1/lu_items','POST',{home_id:id,kind:body.kind,title:body.title,store:body.store,category:body.category||'',...(body.kind==='restaurants'?{cuisine:body.cuisine||'',address:body.address||'',notes:body.notes||''}:{})},a);
  if(path==='items/clear')return request('/rest/v1/lu_items?home_id=eq.'+id+'&done=eq.true&kind=eq.'+encodeURIComponent(body.kind),'DELETE',undefined,a);
- if(path.startsWith('items/')){const query='/rest/v1/lu_items?home_id=eq.'+id+'&id=eq.'+encodeURIComponent(path.split('/')[1]);return request(query,method,method==='PATCH'?(typeof body.done==='boolean'?{done:body.done}:{title:body.title,cuisine:body.cuisine,address:body.address,notes:body.notes}):undefined,a);}
+ if(path.startsWith('items/')){const query='/rest/v1/lu_items?home_id=eq.'+id+'&id=eq.'+encodeURIComponent(path.split('/')[1]);return request(query,method,method==='PATCH'?(typeof body.done==='boolean'?{done:body.done}:Object.fromEntries(['title','store','category','cuisine','address','notes'].filter(key=>Object.hasOwn(body,key)).map(key=>[key,body[key]]))):undefined,a);}
  throw new Error('Unknown action.');
 }

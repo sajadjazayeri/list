@@ -20,6 +20,9 @@ test('password auth preserves identity, restores sessions, refreshes and handles
  let auth=await load();rejectPassword=true;await assert.rejects(auth.signInPassword('test@example.com','test-password-only'),/Invalid login/);assert.equal(auth.signedIn(),false);assert.equal(localStorage.getItem('little-us-auth'),null);
  rejectPassword=false;await auth.signInPassword('test@example.com','test-password-only');assert.equal(auth.signedIn(),true);assert.equal(JSON.parse(localStorage.getItem('little-us-auth')).user.id,'existing-user');assert.ok(!localStorage.getItem('little-us-auth').includes('test-password-only'));
  auth=await load();assert.equal(auth.signedIn(),true);await auth.api('state');assert.equal(calls.filter(c=>c.url.includes('/otp')).length,0);
+ await auth.api('items/test-item','PATCH',{store:'Costco'});assert.deepEqual(calls.at(-1).body,{store:'Costco'});
+ await auth.api('items/test-task','PATCH',{category:'Family'});assert.deepEqual(calls.at(-1).body,{category:'Family'});
+ await auth.api('store-order','POST',{order:['Amazon','Costco']});assert.ok(calls.at(-1).url.endsWith('/rpc/lu_set_store_order'));assert.deepEqual(calls.at(-1).body,{new_order:['Amazon','Costco']});
  await auth.setPassword('replacement-test-password');assert.equal(calls.at(-1).options.method,'PUT');assert.equal(calls.at(-1).options.headers.Authorization,'Bearer mock-access');assert.ok(!localStorage.getItem('little-us-auth').includes('replacement-test-password'));
  expired=true;await auth.signInPassword('test@example.com','test-password-only');auth=await load();await auth.api('state');assert.equal(calls.filter(c=>c.url.includes('grant_type=refresh_token')).length,1);
  await auth.sendPasswordReset('test@example.com');assert.ok(calls.at(-1).url.includes('/recover?redirect_to=https%3A%2F%2Fexample.test%2F'));
